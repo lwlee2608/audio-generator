@@ -406,7 +406,7 @@ export default function App() {
                 step={0.1}
                 value={sliderValue}
                 onChange={(e) => setFrequency(sliderToFrequency(Number(e.target.value)))}
-                className="mt-4 w-full"
+                className="accent-secondary h-2 w-full"
               />
               <div className="mt-3 flex justify-between font-mono text-[10px] text-muted/60">
                 <span>{MIN_FREQ} Hz</span>
@@ -428,7 +428,7 @@ export default function App() {
                   step={0.01}
                   value={volume}
                   onChange={(e) => setVolume(Number(e.target.value))}
-                  className="accent-tone mt-3 w-full"
+                  className="accent-tone thumb-inside h-2 mt-3 w-full"
                 />
                 <div className="mt-2 flex items-center gap-2">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
