@@ -369,7 +369,7 @@ export default function App() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-accent/70">
               Synth Lab
             </p>
-            <h1 className="mt-2 text-4xl font-semibold uppercase tracking-[0.2em] sm:text-5xl">
+            <h1 className="mt-2 font-hero text-4xl font-extrabold tracking-tight sm:text-5xl">
               <span className="text-white">Tone</span>
               <span className="text-accent">
                 {" "}Generator

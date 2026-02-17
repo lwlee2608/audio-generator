@@ -13,6 +13,7 @@ export default {
         muted: "#8892b0"
       },
       fontFamily: {
+        hero: ["Manrope", "sans-serif"],
         display: ["Space Grotesk", "sans-serif"],
         body: ["Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"]
