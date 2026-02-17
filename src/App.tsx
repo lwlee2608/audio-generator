@@ -14,6 +14,32 @@ function frequencyToSlider(freq: number) {
   return (Math.log(freq / MIN_FREQ) / Math.log(MAX_FREQ / MIN_FREQ)) * 100;
 }
 
+function frequencyToNoteLabel(freq: number) {
+  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const midi = Math.round(12 * Math.log2(freq / 440) + 69);
+  const note = notes[((midi % 12) + 12) % 12];
+  const octave = Math.floor(midi / 12) - 1;
+  const target = 440 * Math.pow(2, (midi - 69) / 12);
+  const cents = Math.round(1200 * Math.log2(freq / target));
+  const centsSign = cents > 0 ? `+${cents}` : `${cents}`;
+  return `${note}${octave} (${centsSign}c)`;
+}
+
+function formatFreq(freq: number) {
+  return freq >= 1000
+    ? `${(freq / 1000).toFixed(2)} kHz`
+    : `${Math.round(freq)} Hz`;
+}
+
+const WAVEFORMS: OscillatorType[] = ["sine", "square", "triangle", "sawtooth"];
+
+const WAVEFORM_ICONS: Partial<Record<OscillatorType, string>> = {
+  sine: "~",
+  square: "[]",
+  triangle: "/\\",
+  sawtooth: "/|"
+};
+
 export default function App() {
   const [frequency, setFrequency] = useState(440);
   const [volume, setVolume] = useState(0.08);
@@ -29,6 +55,7 @@ export default function App() {
   const logCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const sliderValue = useMemo(() => frequencyToSlider(frequency), [frequency]);
+  const noteLabel = useMemo(() => frequencyToNoteLabel(frequency), [frequency]);
 
   useEffect(() => {
     if (!oscillatorRef.current || !audioCtxRef.current) return;
@@ -91,10 +118,11 @@ export default function App() {
 
       drawOnCanvas(canvas, (ctx, width, height) => {
         ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#f8fbff";
+        ctx.fillStyle = "#080a14";
         ctx.fillRect(0, 0, width, height);
 
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+        // Grid lines
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.06)";
         ctx.lineWidth = 1;
         for (let i = 1; i < 5; i += 1) {
           const y = (height / 5) * i;
@@ -106,8 +134,8 @@ export default function App() {
 
         const analyser = analyserRef.current;
         if (!analyser || !isPlaying) {
-          ctx.fillStyle = "#64748b";
-          ctx.font = "500 13px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = "rgba(0, 229, 255, 0.3)";
+          ctx.font = "500 13px 'Inter', sans-serif";
           ctx.fillText("Start tone to view live spectrum", 14, height / 2);
           return;
         }
@@ -141,18 +169,34 @@ export default function App() {
           const x = i * barWidth + 1;
           const y = height - barHeight - 2;
 
-          ctx.fillStyle = "rgba(53, 95, 214, 0.85)";
+          // Gradient bars: cyan at bottom, magenta at top
+          const gradient = ctx.createLinearGradient(x, height, x, y);
+          gradient.addColorStop(0, "rgba(0, 229, 255, 0.9)");
+          gradient.addColorStop(0.5, "rgba(0, 229, 255, 0.6)");
+          gradient.addColorStop(1, "rgba(224, 64, 251, 0.8)");
+          ctx.fillStyle = gradient;
           ctx.fillRect(x, y, Math.max(1, barWidth - 2), barHeight);
+
+          // Glow effect on top of bars
+          if (normalized > 0.3) {
+            ctx.shadowColor = "rgba(0, 229, 255, 0.4)";
+            ctx.shadowBlur = 8;
+            ctx.fillRect(x, y, Math.max(1, barWidth - 2), 2);
+            ctx.shadowBlur = 0;
+          }
         }
 
+        // Frequency marker
         const markerX =
           (Math.log(frequency / MIN_FREQ) / Math.log(MAX_FREQ / MIN_FREQ)) * width;
-        ctx.strokeStyle = "rgba(20, 118, 166, 0.95)";
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = "rgba(224, 64, 251, 0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(markerX, 0);
         ctx.lineTo(markerX, height);
         ctx.stroke();
+        ctx.setLineDash([]);
       });
     };
 
@@ -162,14 +206,15 @@ export default function App() {
 
       drawOnCanvas(canvas, (ctx, width, height) => {
         ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#f8fbff";
+        ctx.fillStyle = "#080a14";
         ctx.fillRect(0, 0, width, height);
 
         const freqToX = (freq: number) =>
           (Math.log(freq / MIN_FREQ) / Math.log(MAX_FREQ / MIN_FREQ)) * width;
 
+        // Frequency grid
         const ticks = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.28)";
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.06)";
         ctx.lineWidth = 1;
         ticks.forEach((tick) => {
           const x = freqToX(tick);
@@ -179,17 +224,26 @@ export default function App() {
           ctx.stroke();
         });
 
-        ctx.strokeStyle = "rgba(71, 85, 105, 0.45)";
+        // Baseline
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.15)";
         ctx.beginPath();
         ctx.moveTo(0, height - 20);
         ctx.lineTo(width, height - 20);
         ctx.stroke();
 
+        // Tick labels
+        ctx.fillStyle = "rgba(136, 146, 176, 0.5)";
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        [100, 1000, 10000].forEach((tick) => {
+          const x = freqToX(tick);
+          const label = tick >= 1000 ? `${tick / 1000}k` : `${tick}`;
+          ctx.fillText(label, x - 6, height - 6);
+        });
+
         const amplitude = Math.min(1, volume / MAX_VOLUME);
         const pulse = isPlaying ? 0.9 + Math.sin(time / 420) * 0.1 : 0.55;
 
-        ctx.strokeStyle = "rgba(20, 118, 166, 0.95)";
-        ctx.lineWidth = 2;
+        // Fill area under curve
         ctx.beginPath();
         for (let x = 0; x <= width; x += 1) {
           const currentFreq =
@@ -197,25 +251,51 @@ export default function App() {
           const distance = Math.log2(currentFreq / frequency);
           const envelope = Math.exp(-(distance * distance) / (2 * 0.23 * 0.23));
           const y =
-            height -
-            20 -
-            envelope * amplitude * pulse * Math.max(24, height - 44);
+            height - 20 - envelope * amplitude * pulse * Math.max(24, height - 44);
 
-          if (x === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.lineTo(width, height - 20);
+        ctx.lineTo(0, height - 20);
+        ctx.closePath();
+        const fillGrad = ctx.createLinearGradient(0, 0, 0, height);
+        fillGrad.addColorStop(0, "rgba(0, 229, 255, 0.15)");
+        fillGrad.addColorStop(1, "rgba(0, 229, 255, 0.02)");
+        ctx.fillStyle = fillGrad;
+        ctx.fill();
+
+        // Curve line
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.85)";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "rgba(0, 229, 255, 0.5)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += 1) {
+          const currentFreq =
+            MIN_FREQ * Math.pow(MAX_FREQ / MIN_FREQ, x / Math.max(1, width));
+          const distance = Math.log2(currentFreq / frequency);
+          const envelope = Math.exp(-(distance * distance) / (2 * 0.23 * 0.23));
+          const y =
+            height - 20 - envelope * amplitude * pulse * Math.max(24, height - 44);
+
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
+        // Peak marker
         const markerX = freqToX(frequency);
         const markerY =
           height - 20 - amplitude * pulse * Math.max(24, height - 44);
-        ctx.fillStyle = "#355fd6";
+        ctx.fillStyle = "#00e5ff";
+        ctx.shadowColor = "rgba(0, 229, 255, 0.8)";
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.arc(markerX, markerY, 4, 0, Math.PI * 2);
+        ctx.arc(markerX, markerY, 5, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
       });
     };
 
@@ -275,134 +355,236 @@ export default function App() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(145deg,_#f4f8ff_0%,_#eaf1ff_46%,_#e8f2fb_100%)] px-5 py-10 font-body text-slate-900 sm:px-8">
+    <main className="relative min-h-screen overflow-hidden bg-[#060810] px-4 py-8 font-body text-white sm:px-8">
+      {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(108,144,255,0.35)_0%,_rgba(108,144,255,0)_72%)]" />
-        <div className="absolute -right-20 bottom-8 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(103,181,227,0.32)_0%,_rgba(103,181,227,0)_72%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,_rgba(0,229,255,0.08)_0%,_transparent_50%),radial-gradient(ellipse_at_80%_100%,_rgba(224,64,251,0.06)_0%,_transparent_50%)]" />
+        <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
       </div>
 
-      <section className="relative mx-auto max-w-3xl rounded-[2rem] border border-slate-200/80 bg-white/82 p-6 shadow-[0_22px_65px_rgba(38,67,126,0.16)] backdrop-blur md:p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.19em] text-accent">
-          Speaker Test Tool
-        </p>
-        <h1 className="mt-3 font-display text-5xl leading-[0.95] text-slate-900 sm:text-6xl">
-          Tone Generator
-        </h1>
-        <p className="mt-4 max-w-xl text-sm text-slate-600 sm:text-base">
-          Sweep from deep bass to high treble with smooth logarithmic control.
-          Keep the volume low when you begin to protect your ears and speakers.
-        </p>
+      <section className="relative mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-accent/70">
+              Synth Lab
+            </p>
+            <h1 className="mt-2 font-display text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl">
+              <span className="text-white">Tone</span>
+              <span className="text-accent">
+                {" "}Generator
+              </span>
+            </h1>
+            <p className="mt-3 max-w-lg text-sm text-muted">
+              Precision waveform synthesis with real-time spectral analysis.
+            </p>
+          </div>
 
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-          <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <span>Frequency</span>
-            <span className="font-mono text-lg tracking-normal text-accent">
-              {frequency >= 1000
-                ? `${(frequency / 1000).toFixed(2)} kHz`
-                : `${Math.round(frequency)} Hz`}
-            </span>
-          </label>
-          <input
-            aria-label="Frequency"
-            type="range"
-            min={0}
-            max={100}
-            step={0.1}
-            value={sliderValue}
-            onChange={(e) => setFrequency(sliderToFrequency(Number(e.target.value)))}
-            className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-accent"
-          />
-          <div className="mt-3 flex justify-between text-xs text-slate-500">
-            <span>{MIN_FREQ} Hz</span>
-            <span>{MAX_FREQ / 1000} kHz</span>
+          {/* Live note badge */}
+          <div className="rounded-xl border border-accent/20 bg-accent/5 px-5 py-3 backdrop-blur">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-accent/60">Live Note</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-accent">{noteLabel}</p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Volume
-            </span>
-            <input
-              aria-label="Volume"
-              type="range"
-              min={0.01}
-              max={0.2}
-              step={0.01}
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-tone"
-            />
-            <p className="mt-2 font-mono text-sm text-slate-700">
-              {Math.round(volume * 100)}%
-            </p>
-          </label>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+          {/* Controls panel */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-xl">
+            {/* Frequency */}
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <label className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                <span>Frequency</span>
+                <span className="font-mono text-lg tracking-normal text-accent">
+                  {formatFreq(frequency)}
+                </span>
+              </label>
+              <input
+                aria-label="Frequency"
+                type="range"
+                min={0}
+                max={100}
+                step={0.1}
+                value={sliderValue}
+                onChange={(e) => setFrequency(sliderToFrequency(Number(e.target.value)))}
+                className="mt-4 w-full"
+              />
+              <div className="mt-3 flex justify-between font-mono text-[10px] text-muted/60">
+                <span>{MIN_FREQ} Hz</span>
+                <span>{MAX_FREQ / 1000} kHz</span>
+              </div>
+            </div>
 
-          <label className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Waveform
-            </span>
-            <select
-              value={waveform}
-              onChange={(e) => setWaveform(e.target.value as OscillatorType)}
-              className="mt-3 w-full rounded-xl border border-slate-300 bg-slate-50 p-2 text-slate-800 outline-none ring-accent/80 transition focus:ring"
-            >
-              <option value="sine">Sine</option>
-              <option value="square">Square</option>
-              <option value="triangle">Triangle</option>
-              <option value="sawtooth">Sawtooth</option>
-            </select>
-          </label>
+            {/* Volume + Waveform */}
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  Output Level
+                </span>
+                <input
+                  aria-label="Volume"
+                  type="range"
+                  min={0.01}
+                  max={0.2}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="accent-tone mt-3 w-full"
+                />
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-tone/80 to-tone transition-all duration-150"
+                      style={{ width: `${(volume / MAX_VOLUME) * 100}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-xs text-tone">
+                    {Math.round(volume * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  Waveform
+                </span>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {WAVEFORMS.map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => setWaveform(w)}
+                      className={`rounded-lg border px-3 py-2 font-mono text-xs transition-all ${
+                        waveform === w
+                          ? "border-accent/50 bg-accent/10 text-accent shadow-[0_0_12px_rgba(0,229,255,0.15)]"
+                          : "border-white/[0.06] bg-white/[0.02] text-muted hover:border-white/10 hover:text-white/80"
+                      }`}
+                    >
+                      <span className="block text-base leading-none">{WAVEFORM_ICONS[w]}</span>
+                      <span className="mt-1 block capitalize">{w}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Play/Stop */}
+            <div className="mt-5 flex items-center gap-4">
+              {!isPlaying ? (
+                <button
+                  onClick={startTone}
+                  className="group relative rounded-xl bg-accent px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-[#060810] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,229,255,0.4)] animate-glow-pulse"
+                >
+                  <span className="relative z-10">Start Tone</span>
+                </button>
+              ) : (
+                <button
+                  onClick={stopTone}
+                  className="rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-red-400 transition-all duration-300 hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                >
+                  Stop Tone
+                </button>
+              )}
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    isPlaying
+                      ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(0,229,255,0.6)]"
+                      : "bg-muted/40"
+                  }`}
+                />
+                <span className="text-sm text-muted">
+                  {isPlaying ? "Signal active" : "Signal idle"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Monitor panel */}
+          <aside className="rounded-2xl border border-accent/10 bg-gradient-to-br from-[#0a0f1e] to-[#0d1225] p-5 backdrop-blur-xl">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-accent/50">Monitor</p>
+
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="font-display text-5xl font-bold leading-none text-white">
+                {frequency >= 1000
+                  ? `${(frequency / 1000).toFixed(2)}k`
+                  : `${Math.round(frequency)}`}
+              </span>
+              <span className="font-mono text-lg text-accent/70">Hz</span>
+            </div>
+
+            <p className="mt-2 font-mono text-sm text-secondary/80">{noteLabel}</p>
+
+            <div className="mt-5 space-y-2">
+              {[
+                { label: "Wave", value: waveform, color: "text-accent" },
+                { label: "Level", value: `${Math.round(volume * 100)}%`, color: "text-tone" },
+                { label: "Status", value: isPlaying ? "Running" : "Standby", color: isPlaying ? "text-accent" : "text-muted" }
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2.5"
+                >
+                  <span className="text-xs text-muted/70">{row.label}</span>
+                  <span className={`font-mono text-sm font-semibold capitalize ${row.color}`}>
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini waveform preview */}
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2.5">
+              <span className="text-xs text-muted/70">Output</span>
+              <div className="flex flex-1 items-center justify-center gap-[2px]">
+                {Array.from({ length: 20 }).map((_, i) => {
+                  const h = isPlaying
+                    ? 4 + Math.abs(Math.sin((i / 20) * Math.PI * 2)) * 16
+                    : 4;
+                  return (
+                    <div
+                      key={i}
+                      className="w-1 rounded-full bg-accent/40 transition-all duration-300"
+                      style={{ height: `${h}px` }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          {!isPlaying ? (
-            <button
-              onClick={startTone}
-              className="rounded-xl bg-accent px-5 py-3 text-sm font-semibold uppercase tracking-[0.11em] text-white transition duration-200 hover:bg-[#245fd0]"
-            >
-              Start Tone
-            </button>
-          ) : (
-            <button
-              onClick={stopTone}
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold uppercase tracking-[0.11em] text-white transition duration-200 hover:bg-slate-700"
-            >
-              Stop Tone
-            </button>
-          )}
-          <p className="text-sm text-slate-600">
-            {isPlaying ? "Playing live tone..." : "Audio is stopped."}
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
+        {/* Visualizer canvases */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Spectrum Visualizer
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                Spectrum Analyzer
               </p>
-              <p className="text-xs text-slate-500">Realtime FFT</p>
+              <p className="font-mono text-[10px] text-accent/40">FFT</p>
             </div>
             <canvas
               ref={spectrumCanvasRef}
-              className="h-44 w-full rounded-xl border border-slate-200 bg-[#f8fbff]"
+              className="h-48 w-full rounded-xl border border-white/[0.04] bg-[#080a14]"
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Log Frequency Graph
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                Frequency Response
               </p>
-              <p className="text-xs text-slate-500">10 Hz - 25 kHz</p>
+              <p className="font-mono text-[10px] text-accent/40">10 Hz — 25 kHz</p>
             </div>
             <canvas
               ref={logCanvasRef}
-              className="h-44 w-full rounded-xl border border-slate-200 bg-[#f8fbff]"
+              className="h-48 w-full rounded-xl border border-white/[0.04] bg-[#080a14]"
             />
           </div>
         </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center font-mono text-[10px] tracking-widest text-muted/30">
+          SYNTH LAB v1.0
+        </p>
       </section>
     </main>
   );
