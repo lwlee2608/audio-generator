@@ -387,7 +387,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           {/* Controls panel */}
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-xl">
             {/* Frequency */}
@@ -499,7 +499,7 @@ export default function App() {
           </div>
 
           {/* Monitor panel */}
-          <aside className="rounded-2xl border border-accent/10 bg-gradient-to-br from-[#0a0f1e] to-[#0d1225] p-5 backdrop-blur-xl">
+          <aside className="hidden rounded-2xl border border-accent/10 bg-gradient-to-br from-[#0a0f1e] to-[#0d1225] p-5 backdrop-blur-xl xl:block">
             <p className="text-[10px] uppercase tracking-[0.25em] text-accent/50">Monitor</p>
 
             <div className="mt-3 flex items-baseline gap-2">
@@ -553,7 +553,7 @@ export default function App() {
         </div>
 
         {/* Visualizer canvases */}
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -567,7 +567,7 @@ export default function App() {
             />
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-xl">
+          <div className="hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-xl xl:block">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
                 Frequency Response
