@@ -355,7 +355,7 @@ export default function App() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#060810] px-4 py-8 font-body text-white sm:px-8">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#060810] px-4 py-8 font-body text-white sm:px-8">
       {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,_rgba(0,229,255,0.08)_0%,_transparent_50%),radial-gradient(ellipse_at_80%_100%,_rgba(224,64,251,0.06)_0%,_transparent_50%)]" />
