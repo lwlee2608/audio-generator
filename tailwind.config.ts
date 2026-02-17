@@ -5,13 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        panel: "#0e0b19",
-        accent: "#f95d5d",
-        tone: "#ffd36f"
+        panel: "#ffffff",
+        accent: "#355fd6",
+        tone: "#1476a6"
       },
       fontFamily: {
-        display: ["Bebas Neue", "sans-serif"],
-        body: ["Manrope", "sans-serif"]
+        display: ["Fraunces", "serif"],
+        body: ["Plus Jakarta Sans", "sans-serif"]
       }
     }
   },
