@@ -16,6 +16,8 @@ input[type="range"] {
   appearance: none;
   background: transparent;
   cursor: pointer;
+  padding: 10px 0;
+  min-height: 32px;
 }
 
 input[type="range"]::-webkit-slider-track {

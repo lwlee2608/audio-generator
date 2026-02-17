@@ -369,7 +369,7 @@ export default function App() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-accent/70">
               Synth Lab
             </p>
-            <h1 className="mt-2 font-display text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl">
+            <h1 className="mt-2 text-4xl font-semibold uppercase tracking-[0.2em] sm:text-5xl">
               <span className="text-white">Tone</span>
               <span className="text-accent">
                 {" "}Generator
@@ -503,12 +503,12 @@ export default function App() {
             <p className="text-[10px] uppercase tracking-[0.25em] text-accent/50">Monitor</p>
 
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="font-display text-5xl font-bold leading-none text-white">
+              <span className="text-5xl font-semibold uppercase tracking-[0.2em] leading-none text-white">
                 {frequency >= 1000
                   ? `${(frequency / 1000).toFixed(2)}k`
                   : `${Math.round(frequency)}`}
               </span>
-              <span className="font-mono text-lg text-accent/70">Hz</span>
+              <span className="text-lg font-semibold uppercase tracking-[0.2em] text-accent/70">Hz</span>
             </div>
 
             <p className="mt-2 font-mono text-sm text-secondary/80">{noteLabel}</p>
